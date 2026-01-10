@@ -1,0 +1,462 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XDLVO Calculator</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="plotly.min.js"></script>
+    <script src="xlsx.full.min.js"></script>
+    <script src="xdlvo-model.js"></script>
+    <script src="xdlvo-controller.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="lang-switch">
+                <select id="language-select" onchange="setLanguage(this.value)">
+                    <option value="en" selected>English</option>
+                    <option value="zh">中文</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
+            <h1 data-i18n="title">XDLVO Theory Calculator</h1>
+            <p class="subtitle" data-i18n="subtitle">Extended DLVO Theory for Membrane-Foulant Interactions</p>
+        </header>
+
+        <div class="grid">
+            <div class="ctrl-panel">
+                <div class="panel-title" data-i18n="paramConfig">Parameter Configuration</div>
+
+                <div class="scroll-area">
+                <div class="section">
+                    <div class="section-title" data-i18n="presetConfig">Preset Configuration</div>
+                    <div class="input-group">
+                        <label for="membrane-preset" data-i18n="membranePreset">Membrane Preset</label>
+                        <select id="membrane-preset" onchange="loadMembranePreset()">
+                            <option value="none" data-i18n="noPreset">No Preset</option>
+                            <option value="PVDF">PVDF</option>
+                            <option value="MXene/PVDF">MXene/PVDF</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="foulant-type" data-i18n="foulantPreset">Foulant Preset</label>
+                        <select id="foulant-type" onchange="loadFoulantPreset()">
+                            <option value="none" data-i18n="noPreset">No Preset</option>
+                            <option value="bsa" data-i18n="bsa">BSA (Bovine Serum Albumin)</option>
+                            <option value="ecoli" data-i18n="ecoli">E. coli (Escherichia coli)</option>
+                            <option value="staph" data-i18n="staph">S. aureus (Staphylococcus aureus)</option>
+                            <option value="humic" data-i18n="humic">Humic Acid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="contactAngle">Membrane Contact Angle Parameters (°)</div>
+                    
+                    <!-- Probe Liquid Mode Selection -->
+                    <div class="input-group">
+                        <label for="probe-liquid-mode" data-i18n="probeLiquidMode">Probe Liquid Mode</label>
+                        <select id="probe-liquid-mode" onchange="toggleProbeLiquidMode()">
+                            <option value="default" data-i18n="defaultLiquids">Default Liquids (Diiodomethane/Formamide/Water)</option>
+                            <option value="custom" data-i18n="customLiquids">Custom Liquids</option>
+                        </select>
+                    </div>
+
+                    <!-- Default Liquid Contact Angles -->
+                    <div id="default-angles-section">
+                        <div class="input-group">
+                            <label for="angle-diodomethane" data-i18n="diodomethane">Diiodomethane Contact Angle</label>
+                            <input type="number" id="angle-diodomethane" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label for="angle-formamide" data-i18n="formamide">Formamide Contact Angle</label>
+                            <input type="number" id="angle-formamide" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label for="angle-water" data-i18n="water">Deionized Water Contact Angle</label>
+                            <input type="number" id="angle-water" step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Custom Liquid Parameters -->
+                    <div id="custom-liquids-section" class="hidden">
+                        <!-- Liquid 1: Non-polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid1NonPolar">Liquid 1 (Non-polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="custom-angle-1" data-i18n="liquid1ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="custom-angle-1" step="0.01" value="64.572">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-lw-1" data-i18n="liquid1LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="custom-lw-1" step="0.01" value="50.8">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-plus-1" data-i18n="liquid1Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="custom-plus-1" value="0" readonly style="background: rgba(200, 200, 200, 0.3);">
+                                <small style="color: #666; font-size: 0.85rem;" data-i18n="nonPolarNote">Non-polar liquid, γ⁺ = 0</small>
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-minus-1" data-i18n="liquid1Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="custom-minus-1" value="0" readonly style="background: rgba(200, 200, 200, 0.3);">
+                                <small style="color: #666; font-size: 0.85rem;" data-i18n="nonPolarNote2">Non-polar liquid, γ⁻ = 0</small>
+                            </div>
+                        </div>
+
+                        <!-- Liquid 2: Polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid2Polar">Liquid 2 (Polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="custom-angle-2" data-i18n="liquid2ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="custom-angle-2" step="0.01" value="60.966">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-lw-2" data-i18n="liquid2LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="custom-lw-2" step="0.01" value="39">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-plus-2" data-i18n="liquid2Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="custom-plus-2" step="0.01" value="2.28">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-minus-2" data-i18n="liquid2Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="custom-minus-2" step="0.01" value="39.6">
+                            </div>
+                        </div>
+
+                        <!-- Liquid 3: Polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid3Polar">Liquid 3 (Polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="custom-angle-3" data-i18n="liquid3ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="custom-angle-3" step="0.01" value="87.5268">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-lw-3" data-i18n="liquid3LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="custom-lw-3" step="0.01" value="21.8">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-plus-3" data-i18n="liquid3Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="custom-plus-3" step="0.01" value="25.5">
+                            </div>
+                            <div class="input-group">
+                                <label for="custom-minus-3" data-i18n="liquid3Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="custom-minus-3" step="0.01" value="25.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="foulantContactAngle">Foulant Contact Angle Parameters (°)</div>
+                    
+                    <!-- Probe Liquid Mode Selection -->
+                    <div class="input-group">
+                        <label for="foulant-probe-liquid-mode" data-i18n="foulantProbeLiquidMode">Probe Liquid Mode</label>
+                        <select id="foulant-probe-liquid-mode" onchange="toggleFoulantProbeLiquidMode()">
+                            <option value="default" data-i18n="defaultLiquids">Default Liquids (Diiodomethane/Formamide/Water)</option>
+                            <option value="custom" data-i18n="customLiquids">Custom Liquids</option>
+                        </select>
+                    </div>
+
+                    <!-- Default Liquid Contact Angles -->
+                    <div id="foulant-default-angles-section">
+                        <div class="input-group">
+                            <label for="foulant-angle-diodomethane" data-i18n="foulantDiodomethane">Diiodomethane Contact Angle</label>
+                            <input type="number" id="foulant-angle-diodomethane" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label for="foulant-angle-formamide" data-i18n="foulantFormamide">Formamide Contact Angle</label>
+                            <input type="number" id="foulant-angle-formamide" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label for="foulant-angle-water" data-i18n="foulantWater">Deionized Water Contact Angle</label>
+                            <input type="number" id="foulant-angle-water" step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Custom Liquid Parameters -->
+                    <div id="foulant-custom-liquids-section" class="hidden">
+                        <!-- Liquid 1: Non-polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid1NonPolar">Liquid 1 (Non-polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="foulant-custom-angle-1" data-i18n="liquid1ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="foulant-custom-angle-1" step="0.01" value="40.31">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-lw-1" data-i18n="liquid1LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-lw-1" step="0.01" value="50.8">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-plus-1" data-i18n="liquid1Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-plus-1" value="0" readonly style="background: rgba(200, 200, 200, 0.3);">
+                                <small style="color: #666; font-size: 0.85rem;" data-i18n="nonPolarNote">Non-polar liquid, γ⁺ = 0</small>
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-minus-1" data-i18n="liquid1Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-minus-1" value="0" readonly style="background: rgba(200, 200, 200, 0.3);">
+                                <small style="color: #666; font-size: 0.85rem;" data-i18n="nonPolarNote2">Non-polar liquid, γ⁻ = 0</small>
+                            </div>
+                        </div>
+
+                        <!-- Liquid 2: Polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid2Polar">Liquid 2 (Polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="foulant-custom-angle-2" data-i18n="liquid2ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="foulant-custom-angle-2" step="0.01" value="51.43">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-lw-2" data-i18n="liquid2LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-lw-2" step="0.01" value="39">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-plus-2" data-i18n="liquid2Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-plus-2" step="0.01" value="2.28">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-minus-2" data-i18n="liquid2Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-minus-2" step="0.01" value="39.6">
+                            </div>
+                        </div>
+
+                        <!-- Liquid 3: Polar Liquid -->
+                        <div style="background: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0;">
+                            <div style="font-weight: bold; color: #666; margin-bottom: 10px;" data-i18n="liquid3Polar">Liquid 3 (Polar Liquid)</div>
+                            <div class="input-group">
+                                <label for="foulant-custom-angle-3" data-i18n="liquid3ContactAngle">Contact Angle (°)</label>
+                                <input type="number" id="foulant-custom-angle-3" step="0.01" value="58.50">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-lw-3" data-i18n="liquid3LW">LW Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-lw-3" step="0.01" value="21.8">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-plus-3" data-i18n="liquid3Plus">γ⁺ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-plus-3" step="0.01" value="25.5">
+                            </div>
+                            <div class="input-group">
+                                <label for="foulant-custom-minus-3" data-i18n="liquid3Minus">γ⁻ Component (mJ/m²)</label>
+                                <input type="number" id="foulant-custom-minus-3" step="0.01" value="25.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="electricalParams">Electrical Parameters (mV)</div>
+                    <div class="input-group">
+                        <label for="zeta-membrane" data-i18n="zetaMembrane">Membrane Zeta Potential</label>
+                        <input type="number" id="zeta-membrane" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="zeta-foulant" data-i18n="zetaFoulant">Foulant Zeta Potential</label>
+                        <input type="number" id="zeta-foulant" step="0.1">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="systemParams">System Parameters</div>
+                    <div class="input-group">
+                        <label for="particle-radius" data-i18n="particleRadius">Foulant Apparent Hydraulic Radius (nm)</label>
+                        <input type="number" id="particle-radius" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="ionic-strength" data-i18n="ionicStrength">Ionic Strength (M)</label>
+                        <input type="number" id="ionic-strength" step="0.001" value="0.01" min="0.0001" max="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="temperature" data-i18n="temperature">Temperature (K)</label>
+                        <input type="number" id="temperature" step="0.1" value="298" min="273" max="373">
+                    </div>
+                </div>
+                </div>
+
+                <button id="calculate-btn" class="calc-btn" onclick="calculate()" data-i18n="calculate">Calculate and Plot</button>
+            </div>
+
+            <div class="viz-panel">
+                <div class="panel-title" data-i18n="calcResults">Calculation Results</div>
+
+                <div class="scroll-area">
+                <div class="section">
+                    <div class="section-title" data-i18n="membraneSurfaceTension">Surface Tension (Membrane) (mJ/m²)</div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>LW</sup></div>
+                            <div class="result-value" id="gamma-lw-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ⁺</div>
+                            <div class="result-value" id="gamma-plus-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ⁻</div>
+                            <div class="result-value" id="gamma-minus-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>AB</sup></div>
+                            <div class="result-value" id="gamma-ab-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>TOT</sup></div>
+                            <div class="result-value" id="gamma-tot-result">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="foulantSurfaceTension">Surface Tension (Foulant) (mJ/m²)</div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>LW</sup></div>
+                            <div class="result-value" id="foulant-gamma-lw-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ⁺</div>
+                            <div class="result-value" id="foulant-gamma-plus-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ⁻</div>
+                            <div class="result-value" id="foulant-gamma-minus-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>AB</sup></div>
+                            <div class="result-value" id="foulant-gamma-ab-result">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">γ<sup>TOT</sup></div>
+                            <div class="result-value" id="foulant-gamma-tot-result">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="gibbsEnergy">Gibbs Free Energy (Membrane-Foulant) (mJ/m²)</div>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <div class="result-label">ΔG<sup>LW</sup></div>
+                            <div class="result-value" id="delta-g-lw">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">ΔG<sup>AB</sup></div>
+                            <div class="result-value" id="delta-g-ab">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">ΔG<sup>EL</sup></div>
+                            <div class="result-value" id="delta-g-el">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">ΔG<sup>ADH</sup></div>
+                            <div class="result-value" id="delta-g-adh">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">ΔG<sup>TOT</sup></div>
+                            <div class="result-value" id="delta-g-tot">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title" data-i18n="totalInteraction">Interaction Energy Curves (Membrane-Foulant)</div>
+
+                    <div id="chart-container">
+                        <div class="loading hidden" id="loading">
+                            <div class="spinner"></div>
+                            <span data-i18n="calculating">Calculating...</span>
+                        </div>
+                    </div>
+
+                    <div class="results-grid" style="margin-top: 20px;">
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="energyBarrier">Energy Barrier (kT)</div>
+                            <div class="result-value" id="energy-barrier">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="barrierPosition">Barrier Position (nm)</div>
+                            <div class="result-value" id="barrier-position">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="primaryMinPosition">Primary Minimum Position (nm)</div>
+                            <div class="result-value" id="primary-min-position">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="primaryMinEnergy">Primary Minimum Energy (kT)</div>
+                            <div class="result-value" id="primary-min-energy">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="secondaryMinPosition">Secondary Minimum Position (nm)</div>
+                            <div class="result-value" id="secondary-min-position">-</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label" data-i18n="secondaryMinEnergy">Secondary Minimum Energy (kT)</div>
+                            <div class="result-value" id="secondary-min-energy">-</div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                
+                <button id="export-excel-btn" class="calc-btn" onclick="exportToExcel()" data-i18n="exportExcel">Export to Excel</button>
+            </div>
+
+            <div class="viz-panel full-width">
+                <div class="panel-title" data-i18n="interactiveViz">Interactive Visualization</div>
+                
+                <div id="viz-grid">
+                    <div class="anim-ctrl">
+                        <div class="anim-section">
+                            <h3 class="section-title" data-i18n="animationControl">Animation Control</h3>
+                            <div class="btn-row">
+                                <button id="start-btn" onclick="startAnimation()" class="icon-btn">▶</button>
+                                <button id="stop-btn" onclick="stopAnimation()" class="icon-btn">⏸</button>
+                                <button id="reset-btn" onclick="resetAnimation()" class="icon-btn">↻</button>
+                            </div>
+                            <label for="animation-speed" data-i18n="animationSpeed">Animation Speed</label>
+                            <input type="number" id="animation-speed" min="0.1" max="10" step="0.1" value="1">
+                        </div>
+                        
+                        <div class="anim-section">
+                            <h3 class="section-title" data-i18n="recordControl">Animation Recording</h3>
+                            <div class="record-grid">
+                                <div>
+                                    <label for="record-mode" data-i18n="recordMode">Record Mode</label>
+                                    <select id="record-mode">
+                                        <option value="duration" data-i18n="durationMode">Duration Mode</option>
+                                        <option value="distance" data-i18n="distanceMode">Distance Mode</option>
+                                        <option value="static" data-i18n="staticMode">Static Mode</option>
+                                    </select>
+                                </div>
+                                <div id="duration-input-group">
+                                    <label for="record-duration" data-i18n="recordDuration">Record Duration (s)</label>
+                                    <input type="number" id="record-duration" min="1" max="60" value="6">
+                                </div>
+                                <div id="distance-input-group" class="hidden">
+                                    <label for="record-distance" data-i18n="recordDistance">Distance (nm)</label>
+                                    <input type="number" id="record-distance" min="0.1" max="25" step="0.1" value="5">
+                                </div>
+                            </div>
+                        
+                            <div id="max-distance-display" class="hint hidden">
+                                <span data-i18n="maxDistanceHint">Max Available Distance</span>: <strong id="max-distance-hint">-</strong> nm
+                            </div>
+                        
+                            <button id="export-btn" class="calc-btn" onclick="exportGIF()" data-i18n="exportGIF">Export Video</button>
+                            <div id="progress-container" class="hidden">
+                                <div id="progress-bar" class="progress-bar">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-wrap">
+                        <canvas id="interaction-canvas" width="1200" height="500"></canvas>
+                        <div id="hover-tooltip" class="tooltip hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
