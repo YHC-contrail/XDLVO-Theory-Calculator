@@ -219,8 +219,8 @@
     const ΔG_lw = -2 * (sqrt_gamma_m_lw - sqrt_gamma_w_lw) * (sqrt_gamma_f_lw - sqrt_gamma_w_lw);
     
     // AB component (can be repulsive if surfaces are hydrophilic)
-    const ΔG_ab = 2 * sqrt_gamma_w_minus * (sqrt_gamma_f_minus + sqrt_gamma_m_minus - sqrt_gamma_w_minus) +
-                  2 * sqrt_gamma_w_minus * (sqrt_gamma_f_plus + sqrt_gamma_m_plus - sqrt_gamma_w_minus) -
+    const ΔG_ab = 2 * sqrt_gamma_w_plus * (sqrt_gamma_f_minus + sqrt_gamma_m_minus - sqrt_gamma_w_minus) +
+                  2 * sqrt_gamma_w_minus * (sqrt_gamma_f_plus + sqrt_gamma_m_plus - sqrt_gamma_w_plus) -
                   2 * Math.sqrt(foulant.γ_minus * membrane.γ_plus) -
                   2 * Math.sqrt(foulant.γ_plus * membrane.γ_minus);
     
@@ -424,4 +424,5 @@
     const idx = window.XDLVOModel.findClosestIndex(h_arr, target_h);
     return idx >= 0 && Math.abs(h_arr[idx] - target_h) < tol ? U_arr[idx] : 0;
   };
+
 })();
