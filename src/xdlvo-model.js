@@ -253,7 +253,7 @@
    * where a = foulant radius (nm)
    * Returns energies in units of kT (Boltzmann constant × temperature)
    */
-  window.XDLVOModel.interactionEnergy = function(sysParams, foulantProps, ΔG) {
+  window.XDLVOModel.interactionEnergy = function(sysParams, ΔG) {
     const h = window.XDLVOModel.distanceArray();
     const { h0, λ } = PARAMS;
     const { ε0 } = PHYS;
@@ -426,3 +426,4 @@
   };
 
 })();
+
