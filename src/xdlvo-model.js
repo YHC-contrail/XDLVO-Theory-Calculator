@@ -316,7 +316,7 @@
       }
     }
     
-    // 如果没有找到能垒（maxH仍为null），返回null表示不存在
+    // If no barrier found (maxH is still null), return null to indicate non-existence
     if (maxH === null) {
       return { energy: null, position: null };
     }
@@ -426,4 +426,5 @@
   };
 
 })();
+
 
